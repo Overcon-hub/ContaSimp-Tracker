@@ -54,7 +54,7 @@ class LocationService: Service() {
                         put("battery",batteryPct())
                         put("model",Build.MANUFACTURER+" "+Build.MODEL)
                         put("device_uuid",deviceUuid())
-                        put("app_version","1.41.60")
+                        put("app_version",BuildConfig.VERSION_NAME)
                     }
                     updateNotification("Seguimiento activo · precisión "+loc.accuracy.toInt()+" m")
                     executor.execute {
@@ -65,8 +65,9 @@ class LocationService: Service() {
             }
         }
         createChannel()
-        startForeground(14160,notification("Seguimiento laboral configurado"))
+        startForeground(14161,notification("Seguimiento laboral configurado"))
         handler.post(scheduleLoop)
+        handler.postDelayed(updateLoop,30_000)
     }
 
     private val scheduleLoop=object: Runnable {
@@ -76,6 +77,13 @@ class LocationService: Service() {
             val inside=!t.isBefore(LocalTime.of(9,0)) && !t.isAfter(LocalTime.of(18,30))
             if(inside)startUpdates() else stopUpdates()
             handler.postDelayed(this,60_000)
+        }
+    }
+
+    private val updateLoop=object: Runnable {
+        override fun run(){
+            UpdateManager.check(this@LocationService,false)
+            handler.postDelayed(this,6*60*60*1000L)
         }
     }
 
@@ -132,10 +140,10 @@ class LocationService: Service() {
         .build()
 
     private fun updateNotification(text:String){
-        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(14160,notification(text))
+        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(14161,notification(text))
     }
 
     override fun onStartCommand(intent: Intent?, flags:Int, startId:Int):Int=START_STICKY
-    override fun onDestroy(){handler.removeCallbacks(scheduleLoop);stopUpdates();executor.shutdownNow();super.onDestroy()}
+    override fun onDestroy(){handler.removeCallbacks(scheduleLoop);handler.removeCallbacks(updateLoop);stopUpdates();executor.shutdownNow();super.onDestroy()}
     override fun onBind(intent: Intent?): IBinder?=null
 }
