@@ -11,6 +11,11 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SIGNING_KEY_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      SIGNING_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,36 +36,43 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Restore stable signing key
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      - name: Detect signing setup
+        id: signing
+        shell: bash
         run: |
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/contasimp-terreno-release.jks"
+          if [ -n "$SIGNING_KEY_B64" ] && [ -n "$SIGNING_STORE_PASSWORD" ] && [ -n "$SIGNING_KEY_PASSWORD" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore stable signing key
+        if: steps.signing.outputs.ready == 'true'
+        run: echo "$SIGNING_KEY_B64" | base64 --decode > "$RUNNER_TEMP/contasimp-terreno-release.jks"
 
       - name: Build signed release APK
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: steps.signing.outputs.ready == 'true'
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/contasimp-terreno-release.jks
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ env.SIGNING_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
         run: gradle :app:assembleRelease --stacktrace
 
       - name: Rename signed APK
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: steps.signing.outputs.ready == 'true'
         run: cp app/build/outputs/apk/release/app-release.apk ContaSimp-Terreno-v1.41.61.apk
 
       - name: Build debug APK while signing secrets are pending
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
+        if: steps.signing.outputs.ready != 'true'
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Rename debug APK
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
+        if: steps.signing.outputs.ready != 'true'
         run: cp app/build/outputs/apk/debug/app-debug.apk ContaSimp-Terreno-v1.41.61-DEBUG-NO-ACTUALIZAR.apk
 
       - name: Upload signed APK
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: steps.signing.outputs.ready == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ContaSimp-Terreno-v1.41.61-SIGNED
@@ -68,7 +80,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload temporary debug APK
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
+        if: steps.signing.outputs.ready != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ContaSimp-Terreno-v1.41.61-DEBUG-NO-ACTUALIZAR
