@@ -11,8 +11,8 @@ android {
         applicationId = "cl.contasimp.tracker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.41.53"
+        versionCode = 2
+        versionName = "1.41.60"
     }
 
     compileOptions {
