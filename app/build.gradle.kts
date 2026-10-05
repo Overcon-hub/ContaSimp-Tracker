@@ -7,7 +7,11 @@ android {
     namespace = "cl.contasimp.tracker"
     compileSdk = 35
 
-    buildFeatures {\n        buildConfig = true\n    }\n\n    defaultConfig {
+    buildFeatures {
+        buildConfig = true
+    }
+
+    defaultConfig {
         applicationId = "cl.contasimp.tracker"
         minSdk = 26
         targetSdk = 35
