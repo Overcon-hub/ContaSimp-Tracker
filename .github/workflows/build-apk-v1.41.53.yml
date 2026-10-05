@@ -1,4 +1,4 @@
-name: Build ContaSimp Terreno v1.41.53
+name: Build ContaSimp Terreno v1.41.60
 
 on:
   workflow_dispatch:
@@ -35,11 +35,11 @@ jobs:
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk ContaSimp-Terreno-v1.41.53.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk ContaSimp-Terreno-v1.41.60.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ContaSimp-Terreno-v1.41.53
-          path: ContaSimp-Terreno-v1.41.53.apk
+          name: ContaSimp-Terreno-v1.41.60
+          path: ContaSimp-Terreno-v1.41.60.apk
           if-no-files-found: error
