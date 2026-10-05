@@ -11,8 +11,18 @@ android {
         applicationId = "cl.contasimp.tracker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.41.60"
+        versionCode = 3
+        versionName = "1.41.61"
+    }
+
+    signingConfigs {
+        create("stableRelease") {
+            val ksPath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (!ksPath.isNullOrBlank()) storeFile = file(ksPath)
+            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: "contasimp-terreno"
+            keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+        }
     }
 
     compileOptions {
@@ -27,6 +37,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("stableRelease")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
