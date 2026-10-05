@@ -1,4 +1,4 @@
-name: Build ContaSimp Terreno v1.41.60
+name: Build ContaSimp Terreno v1.41.61
 
 on:
   workflow_dispatch:
@@ -31,15 +31,46 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build debug APK
+      - name: Restore stable signing key
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/contasimp-terreno-release.jks"
+
+      - name: Build signed release APK
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/contasimp-terreno-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease --stacktrace
+
+      - name: Rename signed APK
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: cp app/build/outputs/apk/release/app-release.apk ContaSimp-Terreno-v1.41.61.apk
+
+      - name: Build debug APK while signing secrets are pending
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk ContaSimp-Terreno-v1.41.60.apk
+      - name: Rename debug APK
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
+        run: cp app/build/outputs/apk/debug/app-debug.apk ContaSimp-Terreno-v1.41.61-DEBUG-NO-ACTUALIZAR.apk
 
-      - name: Upload APK
+      - name: Upload signed APK
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ContaSimp-Terreno-v1.41.60
-          path: ContaSimp-Terreno-v1.41.60.apk
+          name: ContaSimp-Terreno-v1.41.61-SIGNED
+          path: ContaSimp-Terreno-v1.41.61.apk
+          if-no-files-found: error
+
+      - name: Upload temporary debug APK
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ContaSimp-Terreno-v1.41.61-DEBUG-NO-ACTUALIZAR
+          path: ContaSimp-Terreno-v1.41.61-DEBUG-NO-ACTUALIZAR.apk
           if-no-files-found: error
